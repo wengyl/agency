@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>页面加载中...</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            text-align: center;
+            padding: 20px;
+        }
+        .container {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 40px 30px;
+            max-width: 400px;
+            width: 100%;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        .icon {
+            width: 80px;
+            height: 80px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 50%;
+            margin: 0 auto 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 40px;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.05); opacity: 0.8; }
+        }
+        h1 { font-size: 24px; margin-bottom: 10px; font-weight: 600; }
+        .subtitle { font-size: 14px; opacity: 0.9; margin-bottom: 30px; }
+        .progress {
+            width: 100%;
+            height: 4px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 2px;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+        .progress-bar {
+            height: 100%;
+            background: #fff;
+            width: 0%;
+            animation: loading 3s ease-in-out;
+        }
+        @keyframes loading {
+            0% { width: 0%; }
+            100% { width: 100%; }
+        }
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 15px;
+            background: rgba(255,255,255,0.95);
+            color: #667eea;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 15px;
+            text-decoration: none;
+            transition: all 0.3s;
+        }
+        .btn:hover { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+        .btn-secondary {
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.5);
+            color: white;
+        }
+        .tips {
+            margin-top: 25px;
+            padding: 15px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 10px;
+            font-size: 13px;
+            line-height: 1.6;
+            text-align: left;
+        }
+        .tips strong { color: #ffd700; }
+        .hidden { display: none; }
+        
+        /* 微信遮罩层 */
+        .wechat-mask {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.9);
+            z-index: 9999;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .wechat-mask.show { display: flex; }
+        .arrow {
+            position: absolute;
+            top: 20px;
+            right: 30px;
+            font-size: 60px;
+            color: #ffd700;
+            animation: bounce 1s infinite;
+        }
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container" id="mainBox">
+        <div class="icon">🚀</div>
+        <h1>即将跳转</h1>
+        <p class="subtitle">正在为您准备安全的访问环境</p>
+        
+        <div class="progress">
+            <div class="progress-bar"></div>
+        </div>
+        
+        <button class="btn" onclick="openInBrowser()" id="openBtn">
+            立即访问
+        </button>
+        
+        <a href="#" class="btn btn-secondary hidden" id="copyBtn" onclick="copyLink()">
+            复制链接手动打开
+        </a>
+        
+        <div class="tips">
+            <strong>💡 提示：</strong><br>
+            • 微信内可能无法正常访问<br>
+            • 建议点击右上角「···」选择「在浏览器打开」<br>
+            • 或点击上方按钮自动跳转
+        </div>
+    </div>
+
+    <!-- 微信遮罩提示 -->
+    <div class="wechat-mask" id="wechatMask">
+        <div class="arrow">👆</div>
+        <h2 style="font-size: 20px; margin-bottom: 15px;">请点击右上角菜单</h2>
+        <p style="opacity: 0.8; line-height: 1.8; text-align: center;">
+            1. 点击右上角「···」<br>
+            2. 选择「在浏览器打开」<br>
+            3. 即可正常访问页面
+        </p>
+    </div>
+
+    <script>
+        // ========== 配置区域 ==========
+        const CONFIG = {
+            // 你的 vlink.cc 目标链接
+            targetUrl: 'https://pub.vlinkx.cn/hnxy',
+            
+            // 备用链接（可选）
+            backupUrl: 'https://pub.vlinkx.cn/hnxy',
+            
+            // 延迟跳转时间（毫秒）
+            delay: 2500,
+            
+            // 是否尝试自动唤醒浏览器
+            autoJump: true
+        };
+
+        // ========== 核心逻辑 ==========
+        
+        // 检测是否在微信内
+        function isWechat() {
+            return /MicroMessenger/i.test(navigator.userAgent) || 
+                   /wechat/i.test(navigator.userAgent);
+        }
+        
+        // 检测是否在QQ内
+        function isQQ() {
+            return /QQ\//i.test(navigator.userAgent);
+        }
+        
+        // 检测是否在内置浏览器
+        function isInAppBrowser() {
+            const ua = navigator.userAgent.toLowerCase();
+            return isWechat() || isQQ() || /weibo|douyin|tiktok/i.test(ua);
+        }
+
+        // 尝试唤醒系统浏览器
+        function openInBrowser() {
+            const url = CONFIG.targetUrl;
+            
+            // 方案1: 使用 location.href 尝试跳转
+            window.location.href = url;
+            
+            // 方案2: 延迟后尝试 scheme 唤醒（iOS/Android）
+            setTimeout(() => {
+                // iOS Safari
+                if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+                    window.location.href = 'safari://' + url.replace(/^https?:\/\//, '');
+                } 
+                // Android Chrome
+                else {
+                    window.location.href = 'googlechrome://' + url.replace(/^https?:\/\//, '');
+                }
+            }, 300);
+            
+            // 方案3: 如果都没成功，显示遮罩提示
+            setTimeout(() => {
+                if (isWechat()) {
+                    document.getElementById('wechatMask').classList.add('show');
+                } else {
+                    // 显示复制按钮
+                    document.getElementById('copyBtn').classList.remove('hidden');
+                }
+            }, 1500);
+        }
+
+        // 复制链接功能
+        function copyLink() {
+            const input = document.createElement('input');
+            input.value = CONFIG.targetUrl;
+            document.body.appendChild(input);
+            input.select();
+            document.execCommand('copy');
+            document.body.removeChild(input);
+            
+            alert('链接已复制！请打开手机浏览器粘贴访问');
+        }
+
+        // 自动跳转逻辑
+        function autoRedirect() {
+            if (!isInAppBrowser()) {
+                // 不在微信/QQ内，直接跳转
+                window.location.replace(CONFIG.targetUrl);
+                return;
+            }
+            
+            // 在微信内，显示页面并倒计时
+            if (CONFIG.autoJump) {
+                setTimeout(() => {
+                    openInBrowser();
+                }, CONFIG.delay);
+            }
+        }
+
+        // 页面加载完成后执行
+        window.onload = function() {
+            // 添加随机参数防止缓存
+            if (!CONFIG.targetUrl.includes('?')) {
+                CONFIG.targetUrl += '?t=' + Date.now();
+            }
+            
+            autoRedirect();
+        };
+
+        // 防止微信分享（可选）
+        document.addEventListener('WeixinJSBridgeReady', function() {
+            if (window.WeixinJSBridge) {
+                WeixinJSBridge.call('hideOptionMenu');
+            }
+        });
+    </script>
+</body>
+</html>
